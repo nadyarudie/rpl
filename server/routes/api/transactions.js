@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/transactionsController');
+const ctrl = require('../../controllers/transactionsController');
 const { validateTransactionData } = require('../../middlewares/validationMiddleware');
 
 // GET /api/transactions

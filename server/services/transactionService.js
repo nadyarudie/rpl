@@ -1,10 +1,12 @@
 const pool = require('../config/database');
+const Transaction = require('../models/transaction');
 const { validateTransactionData } = require('../middlewares/validationMiddleware');
 
 exports.getAllTransactions = async () => {
     try {
         const [rows] = await pool.query('SELECT * FROM transactions ORDER BY id DESC');
-        return rows;
+        // Ubah setiap row menjadi instance dari model Transaction
+        return rows.map(row => new Transaction(row));
     } catch (error) {
         throw error;
     }
@@ -25,8 +27,9 @@ exports.createTransaction = async (transactionData) => {
             'INSERT INTO transactions (title, date, amount, type) VALUES (?, ?, ?, ?)',
             [title, date, amount, type]
         );
+
         const [[newTx]] = await pool.query('SELECT * FROM transactions WHERE id = ?', [result.insertId]);
-        return newTx;
+        return new Transaction(newTx); // ← pakai model di sini
     } catch (error) {
         throw error;
     }
@@ -47,8 +50,9 @@ exports.updateTransaction = async (id, transactionData) => {
             'UPDATE transactions SET title=?, date=?, amount=?, type=? WHERE id=?',
             [title, date, amount, type, id]
         );
+
         const [[updatedTx]] = await pool.query('SELECT * FROM transactions WHERE id = ?', [id]);
-        return updatedTx;
+        return new Transaction(updatedTx); // ← pakai model di sini
     } catch (error) {
         throw error;
     }

@@ -1,10 +1,13 @@
-/**
- * @typedef {object} Transaction
- * @property {number} id
- * @property {string} title
- * @property {string} date
- * @property {number} amount
- * @property {string} type
- */
+// server/models/transaction.js
 
-module.exports = {};
+class Transaction {
+  constructor({ id, title, date, amount, type }) {
+    this.id = id;
+    this.title = title;
+    this.date = date;
+    this.amount = amount;
+    this.type = type;
+  }
+}
+
+module.exports = Transaction;
