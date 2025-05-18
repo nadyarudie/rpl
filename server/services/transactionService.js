@@ -1,6 +1,6 @@
 const pool = require('../config/database');
 const Transaction = require('../models/transaction');
-const { validateTransactionData } = require('../middlewares/validationMiddleware');
+const { ValidationError } = require('../utils/errors');  //  Assuming you create this
 
 exports.getAllTransactions = async () => {
     try {
@@ -16,10 +16,7 @@ exports.createTransaction = async (transactionData) => {
     try {
         const { valid, errors } = validateTransactionData(transactionData);
         if (!valid) {
-            const error = new Error('Invalid transaction data');
-            error.errors = errors;
-            error.status = 400;
-            throw error;
+            throw new ValidationError('Invalid transaction data', errors);  // Use ValidationError
         }
 
         const { title, date, amount, type } = transactionData;
@@ -39,10 +36,7 @@ exports.updateTransaction = async (id, transactionData) => {
     try {
         const { valid, errors } = validateTransactionData(transactionData);
         if (!valid) {
-            const error = new Error('Invalid transaction data');
-            error.errors = errors;
-            error.status = 400;
-            throw error;
+            throw new ValidationError('Invalid transaction data', errors); // Use ValidationError
         }
 
         const { title, date, amount, type } = transactionData;
@@ -61,8 +55,42 @@ exports.updateTransaction = async (id, transactionData) => {
 exports.deleteTransaction = async (id) => {
     try {
         await pool.execute('DELETE FROM transactions WHERE id = ?', [id]);
-        return { success: true };
     } catch (error) {
         throw error;
     }
+};
+
+const validateTransactionData = (data) => {
+    const errors = {};
+    let valid = true;
+
+    if (!data.title || data.title.trim() === '') {
+        errors.title = 'Title is required';
+        valid = false;
+    }
+
+    if (!data.date) {
+        errors.date = 'Date is required';
+        valid = false;
+    } else {
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(data.date)) {
+            errors.date = 'Date must be in YYYY-MM-DD format';
+            valid = false;
+        }
+    }
+
+    if (data.amount === undefined || data.amount === null) {
+        errors.amount = 'Amount is required';
+        valid = false;
+    } else if (typeof data.amount !== 'number') {
+        errors.amount = 'Amount must be a number';
+        valid = false;
+    }
+
+    if (!data.type || !['income', 'expense'].includes(data.type.toLowerCase())) {
+        errors.type = 'Type must be either "income" or "expense"';
+        valid = false;
+    }
+
+    return { valid, errors };
 };

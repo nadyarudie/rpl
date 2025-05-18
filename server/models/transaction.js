@@ -1,5 +1,3 @@
-// server/models/transaction.js
-
 class Transaction {
   constructor({ id, title, date, amount, type }) {
     this.id = id;

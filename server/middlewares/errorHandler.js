@@ -1,4 +1,3 @@
-// server/middlewares/errorHandler.js
 const winston = require('winston');
 
 const logger = winston.createLogger({
@@ -26,14 +25,25 @@ module.exports = (err, req, res, next) => {
 
     let status = err.status || 500;
     if (err.name === 'ValidationError') {
-        status = 400;
+        status = err.status || 400; // Use err.status if available
     }
 
     if (err.name === 'UnauthorizedError') {
-        status = 401;
+        status = err.status || 401; //  Use err.status if available
     }
     if (err.name === 'NotFoundError') {
-        status = 404;
+        status = err.status || 404; // Use err.status if available
+    }
+
+    //  Handle database errors (example: duplicate entry)
+    if (err.code === 'ER_DUP_ENTRY') {
+        status = 409;
+        err.message = 'Duplicate entry';
+    }
+    //  Handle connection errors
+    if (err.code === 'ECONNREFUSED') {
+        status = 503;
+        err.message = 'Database connection refused';
     }
 
     res.status(status).json({
