@@ -5,7 +5,8 @@ import BalanceCard from '../components/BalanceCard';
 import SummaryCard from '../components/SummaryCard';
 import ChartComponent from '../components/ChartComponent';
 import TransactionHistory from '../components/TransactionHistory';
-import { ArrowUpCircle, ArrowDownCircle, Wallet, AlertTriangle } from 'lucide-react';
+import Header from '../components/Header'; // <== Import Header modern
+import { ArrowUpCircle, ArrowDownCircle, AlertTriangle } from 'lucide-react';
 import { sum } from '../lib/calculator';
 import { formatDate } from '../lib/formattor';
 
@@ -93,12 +94,8 @@ export default function Dashboard() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-100 flex flex-col font-sans">
-            <header className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 text-white flex items-center shadow-md sticky top-0 z-50">
-                <Wallet size={28} className="mr-3" />
-                <h1 className="text-2xl font-semibold tracking-tight">Cashil — Track Your Money, Stay Chill.</h1>
-            </header>
-
+        <div className="h-screen bg-slate-100 flex flex-col font-sans overflow-hidden">
+            <Header /> {/* Ini header modern yang sudah dipisah */}
             <main className="flex-grow p-4 lg:p-6">
                 {apiError && (
                     <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center">
