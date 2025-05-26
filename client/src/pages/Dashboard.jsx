@@ -1,156 +1,183 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import AddTransactionModal from '../components/AddTransactionModal';
 import BalanceCard from '../components/BalanceCard';
 import SummaryCard from '../components/SummaryCard';
 import ChartComponent from '../components/ChartComponent';
 import TransactionHistory from '../components/TransactionHistory';
-import Header from '../components/Header'; // <== Import Header modern
+import Header from '../components/Header';
 import { ArrowUpCircle, ArrowDownCircle, AlertTriangle } from 'lucide-react';
 import { sum } from '../lib/calculator';
 import { formatDate } from '../lib/formattor';
+import { fetchTransactions, createTransaction, deleteTransaction } from '../services/transactionService';
 
 export default function Dashboard() {
-    const [transactions, setTransactions] = useState([]);
-    const [selectedId, setSelectedId] = useState(null);
-    const [showModal, setShowModal] = useState(false);
-    const [form, setForm] = useState({ type: 'Income', title: '', amount: '', date: new Date().toISOString().split('T')[0] });
-    const [apiError, setApiError] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    type: 'Income',
+    title: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+  });
+  const [apiError, setApiError] = useState(null);
 
-    const fetchTransactions = () => {
-        axios.get('http://localhost:5000/api/transactions')
-            .then(res => {
-                setTransactions(res.data.map(tx => ({ ...tx, amount: Number(tx.amount) })).sort((a, b) => new Date(b.date) - new Date(a.date)));
-                setApiError(null);
-            })
-            .catch(err => {
-                console.error("Error fetching transactions:", err);
-                setApiError("Gagal memuat transaksi. Pastikan server backend berjalan.");
-            });
+  const getTransactions = () => {
+    fetchTransactions()
+      .then(res => {
+        const sorted = res.data.map(tx => ({
+          ...tx,
+          amount: Number(tx.amount)
+        })).sort((a, b) => new Date(b.date) - new Date(a.date));
+        setTransactions(sorted);
+        setFilteredTransactions(sorted); // default: tampilkan semua
+        setApiError(null);
+      })
+      .catch(err => {
+        console.error("Error fetching transactions:", err);
+        setApiError("Gagal memuat transaksi. Pastikan server backend berjalan dan Anda sudah login.");
+      });
+  };
+
+  useEffect(() => {
+    getTransactions();
+  }, []);
+
+  const balance = sum(filteredTransactions.map(tx => tx.amount));
+  const income = sum(filteredTransactions.filter(t => t.amount > 0).map(t => t.amount));
+  const expense = sum(filteredTransactions.filter(t => t.amount < 0).map(t => Math.abs(t.amount)));
+
+  const addTransaction = (e) => {
+    e.preventDefault();
+    setApiError(null);
+    const payload = {
+      title: form.title,
+      date: form.date,
+      amount: form.type === 'Income' ? parseFloat(form.amount) : -parseFloat(form.amount),
+      type: form.type.toLowerCase(),
     };
 
-    useEffect(() => {
-        fetchTransactions();
-    }, []);
+    createTransaction(payload)
+      .then(() => {
+        getTransactions();
+        setShowModal(false);
+        setForm({ type: 'Income', title: '', amount: '', date: new Date().toISOString().split('T')[0] });
+        setSelectedId(null);
+      })
+      .catch(err => {
+        console.error("Error adding transaction:", err);
+        setApiError("Gagal menambah transaksi. Silakan coba lagi.");
+      });
+  };
 
-    const balance = sum(transactions.map(tx => tx.amount));
-    const income = sum(transactions.filter(t => t.amount > 0).map(t => t.amount));
-    const expense = sum(transactions.filter(t => t.amount < 0).map(t => Math.abs(t.amount)));
+  const handleDelete = (id) => {
+    setApiError(null);
+    deleteTransaction(id)
+      .then(() => {
+        getTransactions();
+        setSelectedId(null);
+      })
+      .catch(err => {
+        console.error("Error deleting transaction:", err);
+        setApiError("Gagal menghapus transaksi. Silakan coba lagi.");
+      });
+  };
 
-    function addTransaction(e) {
-        e.preventDefault();
-        setApiError(null);
-        const payload = {
-            title: form.title,
-            date: form.date,
-            amount: form.type === 'Income' ? parseFloat(form.amount) : -parseFloat(form.amount),
-            type: form.type.toLowerCase(),
+  const getSummaryData = () => {
+    let highestIncome = { amount: 0, date: '-', description: 'N/A' };
+    let highestExpense = { amount: 0, date: '-', description: 'N/A' };
+
+    filteredTransactions.forEach(tx => {
+      if (tx.amount > 0 && tx.amount > highestIncome.amount) {
+        highestIncome = {
+          amount: tx.amount,
+          date: formatDate(tx.date, { year: 'numeric', month: 'short', day: 'numeric' }),
+          description: tx.title
         };
-        axios.post('http://localhost:5000/api/transactions', payload)
-            .then(() => {
-                fetchTransactions();
-                setShowModal(false);
-                setForm({ type: 'Income', title: '', amount: '', date: new Date().toISOString().split('T')[0] });
-                setSelectedId(null);
-            })
-            .catch(err => {
-                console.error("Error adding transaction:", err);
-                setApiError("Gagal menambah transaksi. Silakan coba lagi.");
-            });
-    }
+      } else if (tx.amount < 0 && Math.abs(tx.amount) > highestExpense.amount) {
+        highestExpense = {
+          amount: Math.abs(tx.amount),
+          date: formatDate(tx.date, { year: 'numeric', month: 'short', day: 'numeric' }),
+          description: tx.title
+        };
+      }
+    });
 
-    function deleteTransaction(id) {
-        setApiError(null);
-        axios.delete(`http://localhost:5000/api/transactions/${id}`)
-            .then(() => {
-                fetchTransactions();
-                setSelectedId(null);
-            })
-            .catch(err => {
-                console.error("Error deleting transaction:", err);
-                setApiError("Gagal menghapus transaksi. Silakan coba lagi.");
-            });
-    }
+    return { highestIncome, highestExpense };
+  };
 
-    const getSummaryData = () => {
-        let highestIncome = { amount: 0, date: '-', description: 'N/A' };
-        let highestExpense = { amount: 0, date: '-', description: 'N/A' };
+  const { highestIncome, highestExpense } = getSummaryData();
 
-        transactions.forEach(tx => {
-            if (tx.amount > 0 && tx.amount > highestIncome.amount) {
-                highestIncome = { amount: tx.amount, date: formatDate(tx.date, { year: 'numeric', month: 'short', day: 'numeric' }), description: tx.title };
-            } else if (tx.amount < 0 && Math.abs(tx.amount) > highestExpense.amount) {
-                highestExpense = { amount: Math.abs(tx.amount), date: formatDate(tx.date, { year: 'numeric', month: 'short', day: 'numeric' }), description: tx.title };
-            }
-        });
-        return { highestIncome, highestExpense };
-    };
-    const { highestIncome, highestExpense } = getSummaryData();
+  const getIconForTransaction = (transaction) => {
+    return transaction.amount > 0
+      ? <ArrowUpCircle className="text-green-500" size={20} />
+      : <ArrowDownCircle className="text-red-500" size={20} />;
+  };
 
-    const getIconForTransaction = (transaction) => {
-        return transaction.amount > 0
-            ? <ArrowUpCircle className="text-green-500" size={20} />
-            : <ArrowDownCircle className="text-red-500" size={20} />;
-    };
+  return (
+    <div className="h-screen bg-slate-100 flex flex-col font-sans overflow-hidden">
+      <Header />
+      <main className="flex-grow p-4 lg:p-6">
+        {apiError && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center">
+            <AlertTriangle size={20} className="mr-2" />
+            {apiError}
+          </div>
+        )}
 
-    return (
-        <div className="h-screen bg-slate-100 flex flex-col font-sans overflow-hidden">
-            <Header /> {/* Ini header modern yang sudah dipisah */}
-            <main className="flex-grow p-4 lg:p-6">
-                {apiError && (
-                    <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center">
-                        <AlertTriangle size={20} className="mr-2" />
-                        {apiError}
-                    </div>
-                )}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-1 flex flex-col gap-6">
-                        <BalanceCard balance={balance} income={income} expense={expense} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            <BalanceCard balance={balance} income={income} expense={expense} />
+            <div className="flex-grow min-h-[300px] lg:min-h-0">
+              <TransactionHistory
+                transactions={transactions}
+                selectedId={selectedId}
+                setSelectedId={setSelectedId}
+                deleteTransaction={handleDelete}
+                getIconForTransaction={getIconForTransaction}
+                setShowModal={setShowModal}
+                setFilteredTransactions={setFilteredTransactions} // ✅ Tambahkan ini
+              />
+            </div>
+          </div>
 
-                        <div className="flex-grow min-h-[300px] lg:min-h-0">
-                            <TransactionHistory
-                                transactions={transactions}
-                                selectedId={selectedId}
-                                setSelectedId={setSelectedId}
-                                deleteTransaction={deleteTransaction}
-                                getIconForTransaction={getIconForTransaction}
-                                setShowModal={setShowModal}
-                            />
-                        </div>
-                    </div>
-
-                    <div className="lg:col-span-2 flex flex-col gap-6">
-                        <div className="bg-white p-6 rounded-xl shadow-lg">
-                            <h2 className="text-xl font-semibold mb-1 text-slate-700">Pendapatan vs. Pengeluaran</h2>
-                            <div className="flex items-center space-x-4 mb-4">
-                                <div className="flex items-center">
-                                    <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
-                                    <span className="text-sm text-slate-600">Pendapatan</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
-                                    <span className="text-sm text-slate-600">Pengeluaran</span>
-                                </div>
-                            </div>
-                            <div className="h-[300px] w-full">
-                                <ChartComponent transactions={transactions} />
-                            </div>
-                        </div>
-
-                        <SummaryCard highestIncome={highestIncome} highestExpense={highestExpense} />
-                    </div>
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            <div className="bg-white p-6 rounded-xl shadow-lg">
+              <h2 className="text-xl font-semibold mb-1 text-slate-700">Pendapatan vs. Pengeluaran</h2>
+              <div className="flex items-center space-x-4 mb-4">
+                <div className="flex items-center">
+                  <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
+                  <span className="text-sm text-slate-600">Pendapatan</span>
                 </div>
-            </main>
+                <div className="flex items-center">
+                  <span className="w-3 h-3 bg-purple-500 rounded-full mr-2"></span>
+                  <span className="text-sm text-slate-600">Pengeluaran</span>
+                </div>
+              </div>
+              <div className="h-[300px] w-full">
+                <ChartComponent transactions={filteredTransactions} />
+              </div>
+            </div>
 
-            {showModal && (
-                <AddTransactionModal
-                    setShowModal={setShowModal}
-                    apiError={apiError}
-                    addTransaction={addTransaction}
-                    form={form}
-                    setForm={setForm}
-                />
-            )}
+            <SummaryCard
+              highestIncome={highestIncome}
+              highestExpense={highestExpense}
+              filteredTransactions={filteredTransactions} // ✅ Kirimkan ke SummaryCard
+            />
+          </div>
         </div>
-    );
+      </main>
+
+      {showModal && (
+        <AddTransactionModal
+          setShowModal={setShowModal}
+          apiError={apiError}
+          addTransaction={addTransaction}
+          form={form}
+          setForm={setForm}
+        />
+      )}
+    </div>
+  );
 }
