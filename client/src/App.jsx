@@ -1,9 +1,9 @@
 import { Routes, Route } from "react-router-dom";
-import Landing from "@/pages/Landing";
-import Login from "@/pages/Login";
+import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import Register from "@/pages/Register";
-import Dashboard from "@/pages/Dashboard";
-import EditProfile from "@/pages/EditProfile";
+import Dashboard from "@/pages/dashboard";
+import EditProfile from "@/pages/editProfile";
 
 export default function App() {
   return (

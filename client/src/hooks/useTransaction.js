@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { fetchTransactions, createTransaction, deleteTransaction } from '../services/transactionService'; // Import yang benar
+import {
+  fetchTransactions,
+  createTransaction,
+  deleteTransaction
+} from '@/services/transactionService';
 
 export default function useTransactions() {
   const [transactions, setTransactions] = useState([]);
