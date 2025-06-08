@@ -1,26 +1,20 @@
-// client/src/models/User.js
-
-class User {
-  constructor({ id, username, email, createdAt, updatedAt }) {
+// src/models/User.js
+export default class User {
+  /**
+   * @param {Object} params
+   * @param {number|string} params.id
+   * @param {string} params.name
+   * @param {string} params.email
+   * @param {string} params.username
+   * @param {string} params.password
+   * @param {string} params.created_at — timestamp ISO string
+   */
+  constructor({ id, name, email, username, password, created_at }) {
     this.id = id;
-    this.username = username;
+    this.name = name;
     this.email = email;
-    this.createdAt = createdAt ? new Date(createdAt) : null;
-    this.updatedAt = updatedAt ? new Date(updatedAt) : null;
-  }
-
-  getFormattedCreatedAt() {
-    if (!this.createdAt) return 'N/A';
-    return this.createdAt.toLocaleDateString('id-ID', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  }
-
-  getDisplayName() {
-    return this.username || this.email;
+    this.username = username;
+    this.password = password;         
+    this.createdAt = new Date(created_at);
   }
 }
-
-export default User;
