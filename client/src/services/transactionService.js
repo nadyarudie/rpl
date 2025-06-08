@@ -1,6 +1,6 @@
-import axios from 'axios';
-const API = axios.create({ baseURL: 'http://localhost:5000/api' });
+// client/src/services/transactionService.js
+import API from '@/lib/apiClient';
 
-export const fetchTransactions  = () => API.get('/transactions');
-export const createTransaction  = payload => API.post('/transactions', payload);
-export const deleteTransaction  = id      => API.delete(`/transactions/${id}`);
+export const fetchTransactions = () => API.get('/transactions'); // Pastikan tidak ada '/api' di sini
+export const createTransaction = (payload) => API.post('/transactions', payload); // Pastikan tidak ada '/api' di sini
+export const deleteTransaction = (id) => API.delete(`/transactions/${id}`); // Pastikan tidak ada '/api' di sini

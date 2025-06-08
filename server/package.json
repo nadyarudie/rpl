@@ -6,9 +6,17 @@
     "start": "node server.js"
   },
   "dependencies": {
+<<<<<<< HEAD
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "express": "^4.21.2",
+=======
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+>>>>>>> f2e40f4 (Initial commit for cash project)
     "mysql2": "^2.3.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

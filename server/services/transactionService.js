@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 const pool = require('../config/database');
 const Transaction = require('../models/transaction');
 const { ValidationError } = require('../utils/errors');  //  Assuming you create this
@@ -94,3 +95,27 @@ const validateTransactionData = (data) => {
 
     return { valid, errors };
 };
+=======
+import axios from 'axios';
+
+const API = axios.create({
+  baseURL: 'http://localhost:5000/api',
+});
+
+// ✅ Tambahkan interceptor agar Authorization: Bearer <token> otomatis
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// ✅ Fungsi transaksi
+export const fetchTransactions = () => API.get('/transactions');
+export const createTransaction = (payload) => API.post('/transactions', payload);
+export const deleteTransaction = (id) => API.delete(`/transactions/${id}`);
+>>>>>>> f2e40f4 (Initial commit for cash project)

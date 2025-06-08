@@ -1,5 +1,18 @@
-import React from 'react';
-import Dashboard from './pages/Dashboard';
+import { Routes, Route } from "react-router-dom";
+import Landing from "@/pages/Landing";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import Dashboard from "@/pages/Dashboard";
+import EditProfile from "@/pages/EditProfile";
+
 export default function App() {
-  return <Dashboard />;
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/edit-profile" element={<EditProfile />} />
+    </Routes>
+  );
 }
