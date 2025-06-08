@@ -1,14 +1,11 @@
 import React, { useState } from "react";
-import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { login as loginService } from "@/services/authService";
 
 export default function Login() {
-  const [form, setForm] = useState({
-    username: "",
-    password: "",
-  });
+  const [form, setForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState({});
   const navigate = useNavigate();
@@ -24,16 +21,14 @@ export default function Login() {
       return;
     }
     try {
-      const res = await axios.post("http://localhost:5000/api/auth/login", form);
-      localStorage.setItem("token", res.data.token || "");
-      localStorage.setItem("username", res.data.user.username || "User"); // Simpan username
+      const res = await loginService(form);
+      const { token, user } = res.data;
+      localStorage.setItem("token", token || "");
+      localStorage.setItem("username", user.username || "User");
       navigate("/dashboard");
     } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        setError({ general: err.response.data.message });
-      } else {
-        setError({ general: "Login gagal. Coba lagi." });
-      }
+      const msg = err.response?.data?.message;
+      setError({ general: msg || "Login gagal. Coba lagi." });
     }
   };
 
@@ -57,8 +52,11 @@ export default function Login() {
             <p className="text-red-500 text-xs mb-4">{error.general}</p>
           )}
           <div>
-            <label className="block mb-1 font-medium text-blue-700">Username</label>
+            <label htmlFor="username" className="block mb-1 font-medium text-blue-700">
+              Username
+            </label>
             <input
+              id="username"
               name="username"
               type="text"
               className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -68,9 +66,12 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block mb-1 font-medium text-blue-700">Password</label>
+            <label htmlFor="password" className="block mb-1 font-medium text-blue-700">
+              Password
+            </label>
             <div className="relative">
               <input
+                id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
                 className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 pr-12"
@@ -97,7 +98,7 @@ export default function Login() {
           </Button>
         </form>
         <div className="mt-6 text-center text-sm text-slate-500">
-          Belum punya akun?{" "}
+          Belum punya akun?{' '}
           <Link to="/register" className="text-blue-600 hover:underline font-semibold">
             Register
           </Link>
