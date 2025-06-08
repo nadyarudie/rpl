@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ListChecks, Plus } from 'lucide-react';
-import { formatDate, formatRupiah } from '../lib/formattor';
+import { formatDate, formatRupiah } from '@/lib/formatting/formattor';
+import useFilteredTransactions from '@/hooks/useFilteredTransactions';
 
 const TransactionHistory = ({
   transactions,
@@ -10,22 +11,19 @@ const TransactionHistory = ({
   getIconForTransaction,
   setShowModal
 }) => {
-  const [selectedMonth, setSelectedMonth] = useState('all');
-  const [selectedYear, setSelectedYear] = useState('all');
+  const {
+    filtered,
+    selectedMonth,
+    setSelectedMonth,
+    selectedYear,
+    setSelectedYear,
+    years
+  } = useFilteredTransactions(transactions);
 
   const months = [
     'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
   ];
-
-  const years = [...new Set(transactions.map(t => new Date(t.date).getFullYear()))];
-
-  const filtered = transactions.filter(tx => {
-    const date = new Date(tx.date);
-    const monthMatch = selectedMonth === 'all' || date.getMonth() === parseInt(selectedMonth);
-    const yearMatch = selectedYear === 'all' || date.getFullYear() === parseInt(selectedYear);
-    return monthMatch && yearMatch;
-  });
 
   const grouped = filtered
     .slice()

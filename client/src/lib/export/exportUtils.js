@@ -1,26 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-const logoURL = '/assets/cashilLogo.png';
-
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.src = src;
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/png'));
-    };
-    img.onerror = (err) => {
-      console.error("Gagal memuat gambar:", src, err);
-      reject(err);
-    };
-  });
-}
+import logoBase64 from '@/assets/cashilLogo.png'; // ✅ pakai langsung base64
 
 // Efek blur lingkaran
 function drawBlurredCircle(doc, x, y, baseRadius, baseColor) {
@@ -53,16 +33,15 @@ export const exportToPDF = async (transactions) => {
   const paddingTop = 8;
   const blue = [59, 130, 246];
 
-  // Header background
+  // 🔵 Header background
   doc.setFillColor(...blue);
   doc.rect(0, 0, doc.internal.pageSize.width, headerHeight, 'F');
 
-  // Logo + Teks Sejajar
+  // 🔵 Logo dan Teks header
   try {
-    const logo = await loadImage(logoURL);
-    doc.addImage(logo, 'PNG', paddingLeft, paddingTop, logoSize, logoSize);
+    doc.addImage(logoBase64, 'PNG', paddingLeft, paddingTop, logoSize, logoSize);
   } catch (err) {
-    console.warn('Logo gagal dimuat, lanjut tanpa logo:', err);
+    console.warn('Logo gagal ditampilkan:', err);
   }
 
   const textX = paddingLeft + logoSize + 6;
@@ -85,39 +64,38 @@ export const exportToPDF = async (transactions) => {
   currentY += 5;
   doc.text(`Dicetak: ${now}`, textX, currentY);
 
-  // Watermark logo + text
+  // 🔵 Watermark tengah
   try {
-    const logoWatermark = await loadImage(logoURL);
     const imgWidth = 50;
     const imgHeight = 50;
     const x = (doc.internal.pageSize.width - imgWidth) / 2;
     const y = (doc.internal.pageSize.height - imgHeight) / 2 - 20;
 
     doc.setGState(new doc.GState({ opacity: 0.1 }));
-    doc.addImage(logoWatermark, 'PNG', x, y, imgWidth, imgHeight);
+    doc.addImage(logoBase64, 'PNG', x, y, imgWidth, imgHeight);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(30);
     doc.setTextColor(180, 180, 180);
     doc.text('CASHIL', doc.internal.pageSize.width / 2, y + imgHeight + 10, { align: 'center' });
     doc.setGState(new doc.GState({ opacity: 1 }));
   } catch (err) {
-    console.warn('Logo watermark gagal dimuat:', err);
+    console.warn('Watermark gagal dimuat:', err);
   }
 
-  // Latar blur dengan lingkaran
+  // 🔵 Dekorasi lingkaran blur
   drawBlurredCircle(doc, 30, 80, 25, blue);
   drawBlurredCircle(doc, doc.internal.pageSize.width - 30, 120, 30, blue);
   drawBlurredCircle(doc, 50, doc.internal.pageSize.height - 50, 40, blue);
   drawBlurredCircle(doc, doc.internal.pageSize.width - 60, doc.internal.pageSize.height - 100, 35, blue);
 
-  // Data tabel
-  const tableData = transactions.map((tx, index) => ([
+  // 🔵 Tabel transaksi
+  const tableData = transactions.map((tx, index) => [
     index + 1,
     tx.title,
     new Date(tx.date).toLocaleDateString('id-ID', { year: 'numeric', month: 'short', day: 'numeric' }),
     tx.type === 'income' ? 'Pendapatan' : 'Pengeluaran',
     `Rp${Number(tx.amount).toLocaleString('id-ID')}`
-  ]));
+  ]);
 
   autoTable(doc, {
     startY: headerHeight + 10,

@@ -1,124 +1,81 @@
-import React, { useState, useEffect } from 'react';
-import AddTransactionModal from '../components/AddTransactionModal';
-import BalanceCard from '../components/BalanceCard';
-import SummaryCard from '../components/SummaryCard';
-import ChartComponent from '../components/ChartComponent';
-import TransactionHistory from '../components/TransactionHistory';
-import Header from '../components/Header';
-import { ArrowUpCircle, ArrowDownCircle, AlertTriangle } from 'lucide-react';
-import { sum } from '../lib/calculator';
-import { formatDate } from '../lib/formattor';
-import { fetchTransactions, createTransaction, deleteTransaction } from '../services/transactionService';
+import React, { useState, useEffect } from "react";
+
+// Komponen utama
+import AddTransactionModal from "@/components/Transaction/AddTransactionModal";
+import BalanceCard from "@/components/Transaction/BalanceCard";
+import SummaryCard from "@/components/Transaction/SummaryCard";
+import ChartComponent from "@/components/Chart/ChartComponent";
+import TransactionHistory from "@/components/Transaction/TransactionHistory";
+import Header from "@/components/Header";
+
+// Ikon
+import { ArrowUpCircle, ArrowDownCircle, AlertTriangle } from "lucide-react";
+
+// Utilitas & hooks
+import { sum } from "@/lib/math/calculator";
+import { getSummaryData } from "@/lib/summary/summary";
+import useTransactions from "@/hooks/useTransaction";
 
 export default function Dashboard() {
-  const [transactions, setTransactions] = useState([]);
-  const [filteredTransactions, setFilteredTransactions] = useState([]);
+  const {
+    transactions,
+    error: apiError,
+    setError: setApiError,
+    addTransaction,
+    removeTransaction,
+  } = useTransactions();
+
+  const [filteredTransactions, setFilteredTransactions] = useState(transactions);
   const [selectedId, setSelectedId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({
-    type: 'Income',
-    title: '',
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
+    type: "Income",
+    title: "",
+    amount: "",
+    date: new Date().toISOString().split("T")[0],
   });
-  const [apiError, setApiError] = useState(null);
-
-  const getTransactions = () => {
-    fetchTransactions()
-      .then(res => {
-        const sorted = res.data.map(tx => ({
-          ...tx,
-          amount: Number(tx.amount)
-        })).sort((a, b) => new Date(b.date) - new Date(a.date));
-        setTransactions(sorted);
-        setFilteredTransactions(sorted); // default: tampilkan semua
-        setApiError(null);
-      })
-      .catch(err => {
-        console.error("Error fetching transactions:", err);
-        setApiError("Gagal memuat transaksi. Pastikan server backend berjalan dan Anda sudah login.");
-      });
-  };
 
   useEffect(() => {
-    getTransactions();
-  }, []);
+    setFilteredTransactions(transactions);
+  }, [transactions]);
 
   const balance = sum(filteredTransactions.map(tx => tx.amount));
   const income = sum(filteredTransactions.filter(t => t.amount > 0).map(t => t.amount));
   const expense = sum(filteredTransactions.filter(t => t.amount < 0).map(t => Math.abs(t.amount)));
 
-  const addTransaction = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
-    setApiError(null);
-    const payload = {
-      title: form.title,
-      date: form.date,
-      amount: form.type === 'Income' ? parseFloat(form.amount) : -parseFloat(form.amount),
-      type: form.type.toLowerCase(),
-    };
-
-    createTransaction(payload)
-      .then(() => {
-        getTransactions();
-        setShowModal(false);
-        setForm({ type: 'Income', title: '', amount: '', date: new Date().toISOString().split('T')[0] });
-        setSelectedId(null);
-      })
-      .catch(err => {
-        console.error("Error adding transaction:", err);
-        setApiError("Gagal menambah transaksi. Silakan coba lagi.");
+    const success = await addTransaction(form);
+    if (success) {
+      setShowModal(false);
+      setForm({
+        type: "Income",
+        title: "",
+        amount: "",
+        date: new Date().toISOString().split("T")[0],
       });
+      setSelectedId(null);
+    }
   };
 
   const handleDelete = (id) => {
-    setApiError(null);
-    deleteTransaction(id)
-      .then(() => {
-        getTransactions();
-        setSelectedId(null);
-      })
-      .catch(err => {
-        console.error("Error deleting transaction:", err);
-        setApiError("Gagal menghapus transaksi. Silakan coba lagi.");
-      });
+    removeTransaction(id);
+    setSelectedId(null);
   };
 
-  const getSummaryData = () => {
-    let highestIncome = { amount: 0, date: '-', description: 'N/A' };
-    let highestExpense = { amount: 0, date: '-', description: 'N/A' };
+  const { highestIncome, highestExpense } = getSummaryData(filteredTransactions);
 
-    filteredTransactions.forEach(tx => {
-      if (tx.amount > 0 && tx.amount > highestIncome.amount) {
-        highestIncome = {
-          amount: tx.amount,
-          date: formatDate(tx.date, { year: 'numeric', month: 'short', day: 'numeric' }),
-          description: tx.title
-        };
-      } else if (tx.amount < 0 && Math.abs(tx.amount) > highestExpense.amount) {
-        highestExpense = {
-          amount: Math.abs(tx.amount),
-          date: formatDate(tx.date, { year: 'numeric', month: 'short', day: 'numeric' }),
-          description: tx.title
-        };
-      }
-    });
-
-    return { highestIncome, highestExpense };
-  };
-
-  const { highestIncome, highestExpense } = getSummaryData();
-
-  const getIconForTransaction = (transaction) => {
-    return transaction.amount > 0
-      ? <ArrowUpCircle className="text-green-500" size={20} />
-      : <ArrowDownCircle className="text-red-500" size={20} />;
-  };
+  const getIconForTransaction = (transaction) =>
+    transaction.amount > 0 ? (
+      <ArrowUpCircle className="text-green-500" size={20} />
+    ) : (
+      <ArrowDownCircle className="text-red-500" size={20} />
+    );
 
   return (
-    <div className="h-screen bg-slate-100 flex flex-col font-sans overflow-hidden">
+    <div className="h-[100dvh] bg-slate-100 flex flex-col font-sans overflow-hidden">
       <Header />
-      <main className="flex-grow p-4 lg:p-6">
+      <main className="flex-grow p-4 lg:p-6 pb-20"> {/* ✅ tambahkan padding bawah */}
         {apiError && (
           <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center">
             <AlertTriangle size={20} className="mr-2" />
@@ -127,6 +84,7 @@ export default function Dashboard() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Kiri: Balance dan History */}
           <div className="lg:col-span-1 flex flex-col gap-6">
             <BalanceCard balance={balance} income={income} expense={expense} />
             <div className="flex-grow min-h-[300px] lg:min-h-0">
@@ -137,14 +95,17 @@ export default function Dashboard() {
                 deleteTransaction={handleDelete}
                 getIconForTransaction={getIconForTransaction}
                 setShowModal={setShowModal}
-                setFilteredTransactions={setFilteredTransactions} // ✅ Tambahkan ini
+                setFilteredTransactions={setFilteredTransactions}
               />
             </div>
           </div>
 
+          {/* Kanan: Chart dan Ringkasan */}
           <div className="lg:col-span-2 flex flex-col gap-6">
             <div className="bg-white p-6 rounded-xl shadow-lg">
-              <h2 className="text-xl font-semibold mb-1 text-slate-700">Pendapatan vs. Pengeluaran</h2>
+              <h2 className="text-xl font-semibold mb-1 text-slate-700">
+                Pendapatan vs. Pengeluaran
+              </h2>
               <div className="flex items-center space-x-4 mb-4">
                 <div className="flex items-center">
                   <span className="w-3 h-3 bg-blue-500 rounded-full mr-2"></span>
@@ -163,17 +124,18 @@ export default function Dashboard() {
             <SummaryCard
               highestIncome={highestIncome}
               highestExpense={highestExpense}
-              filteredTransactions={filteredTransactions} // ✅ Kirimkan ke SummaryCard
+              filteredTransactions={filteredTransactions}
             />
           </div>
         </div>
       </main>
 
+      {/* Modal Tambah */}
       {showModal && (
         <AddTransactionModal
           setShowModal={setShowModal}
           apiError={apiError}
-          addTransaction={addTransaction}
+          addTransaction={handleAdd}
           form={form}
           setForm={setForm}
         />

@@ -1,7 +1,9 @@
 import React from "react";
 import { Plus, CalendarIcon } from "lucide-react";
-import { isNotEmpty, isPositiveNumber, isValidDate } from "../lib/validator";
-import { formatRupiah } from "../lib/formattor";
+
+// ✅ Sudah tidak pakai dateHelper
+import { formatRupiah } from "@/lib";
+import { validateTransaction } from "@/lib/validation/transactionValidator";
 
 // shadcn/ui components
 import { Button } from "@/components/ui/button";
@@ -14,14 +16,14 @@ import {
 
 import { format } from "date-fns";
 
-// Helper konversi Date ke string YYYY-MM-DD
-function toYMD(date) {
+// ⬇️ Tambahkan fungsi lokal toYMD di sini
+const toYMD = (date) => {
   if (!date) return "";
   const d = new Date(date);
   const mm = (d.getMonth() + 1).toString().padStart(2, "0");
   const dd = d.getDate().toString().padStart(2, "0");
   return `${d.getFullYear()}-${mm}-${dd}`;
-}
+};
 
 export default function AddTransactionModal({
   setShowModal,
@@ -31,35 +33,6 @@ export default function AddTransactionModal({
   setForm,
 }) {
   const { valid, errors } = validateTransaction(form);
-
-  function validateTransaction(form) {
-    const errors = {};
-    let valid = true;
-
-    if (!form.type) {
-      errors.type = "Jenis transaksi harus dipilih.";
-      valid = false;
-    }
-
-    if (!isNotEmpty(form.title)) {
-      errors.title = "Judul transaksi tidak boleh kosong.";
-      valid = false;
-    }
-
-    if (!form.amount || !isPositiveNumber(Number(form.amount))) {
-      errors.amount = "Jumlah harus berupa angka positif.";
-      valid = false;
-    }
-
-    if (!form.date || !isValidDate(form.date)) {
-      errors.date = "Format tanggal tidak valid (YYYY-MM-DD).";
-      valid = false;
-    }
-
-    return { valid, errors };
-  }
-
-  // Untuk Calendar shadcn/ui
   const selectedDate = form.date ? new Date(form.date) : undefined;
 
   return (
@@ -92,10 +65,7 @@ export default function AddTransactionModal({
           className="space-y-4"
         >
           <div>
-            <label
-              htmlFor="type"
-              className="block text-sm font-medium text-slate-700 mb-1"
-            >
+            <label htmlFor="type" className="block text-sm font-medium text-slate-700 mb-1">
               Jenis
             </label>
             <select
@@ -107,16 +77,11 @@ export default function AddTransactionModal({
               <option value="Income">Income</option>
               <option value="Expense">Expense</option>
             </select>
-            {errors.type && (
-              <p className="mt-1 text-xs text-red-500">{errors.type}</p>
-            )}
+            {errors.type && <p className="mt-1 text-xs text-red-500">{errors.type}</p>}
           </div>
 
           <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-slate-700 mb-1"
-            >
+            <label htmlFor="title" className="block text-sm font-medium text-slate-700 mb-1">
               Judul
             </label>
             <input
@@ -127,16 +92,11 @@ export default function AddTransactionModal({
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
-            {errors.title && (
-              <p className="mt-1 text-xs text-red-500">{errors.title}</p>
-            )}
+            {errors.title && <p className="mt-1 text-xs text-red-500">{errors.title}</p>}
           </div>
 
           <div>
-            <label
-              htmlFor="amount"
-              className="block text-sm font-medium text-slate-700 mb-1"
-            >
+            <label htmlFor="amount" className="block text-sm font-medium text-slate-700 mb-1">
               Jumlah (Rp)
             </label>
             <input
@@ -147,26 +107,18 @@ export default function AddTransactionModal({
               value={form.amount}
               onChange={(e) => setForm({ ...form, amount: e.target.value })}
             />
-            {errors.amount && (
-              <p className="mt-1 text-xs text-red-500">{errors.amount}</p>
-            )}
+            {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount}</p>}
           </div>
 
           <div>
-            <label
-              htmlFor="date"
-              className="block text-sm font-medium text-slate-700 mb-1"
-            >
+            <label htmlFor="date" className="block text-sm font-medium text-slate-700 mb-1">
               Tanggal
             </label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
-                  className={
-                    "w-full justify-start text-left font-normal " +
-                    (!selectedDate && "text-muted-foreground")
-                  }
+                  className={`w-full justify-start text-left font-normal ${!selectedDate ? "text-muted-foreground" : ""}`}
                   type="button"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -179,32 +131,23 @@ export default function AddTransactionModal({
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={(date) => {
-                    setForm({
-                      ...form,
-                      date: date ? toYMD(date) : "",
-                    });
-                  }}
+                  onSelect={(date) =>
+                    setForm({ ...form, date: date ? toYMD(date) : "" })
+                  }
                   initialFocus
                   fromYear={2022}
                   toYear={2032}
                 />
               </PopoverContent>
             </Popover>
-            {errors.date && (
-              <p className="mt-1 text-xs text-red-500">{errors.date}</p>
-            )}
+            {errors.date && <p className="mt-1 text-xs text-red-500">{errors.date}</p>}
           </div>
 
           <button
             type="submit"
             disabled={!valid}
             className={`w-full py-2.5 px-4 rounded-md font-semibold text-white
-                ${
-                  valid
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : "bg-gray-300 cursor-not-allowed"
-                }`}
+              ${valid ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-300 cursor-not-allowed"}`}
           >
             {valid
               ? `Simpan (${formatRupiah(Number(form.amount) || 0)})`

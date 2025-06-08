@@ -1,7 +1,7 @@
 import React from 'react';
-import { formatRupiah } from '../lib/formattor';
+import { formatRupiah } from '@/lib'; // ✅ benar, karena sudah diekspor lewat lib/index.js
 import Lottie from 'lottie-react';
-import moneyAnimation from '../assets/money-falling.json';
+import moneyAnimation from '@/assets/money-falling.json';
 
 const BalanceCard = ({ balance, income, expense }) => {
     return (

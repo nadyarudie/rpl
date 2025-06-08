@@ -3,14 +3,16 @@ import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
+const INITIAL_FORM = {
+  name: "",
+  email: "",
+  username: "",
+  password: "",
+  confirmPassword: "",
+};
+
 export default function EditProfile() {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    username: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [form, setForm] = useState(INITIAL_FORM);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const navigate = useNavigate();
@@ -20,15 +22,15 @@ export default function EditProfile() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Simulasi update
+    if (form.password !== form.confirmPassword) {
+      return alert("Password dan konfirmasi tidak cocok.");
+    }
     alert("Profile updated! (Simulasi)");
   };
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-b from-blue-50 via-white to-white">
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-blue-100">
-
-        {/* Tombol Back ke Dashboard */}
         <button
           type="button"
           onClick={() => navigate("/dashboard")}
@@ -41,38 +43,24 @@ export default function EditProfile() {
         <h2 className="text-2xl font-semibold mb-8 text-blue-700 text-center tracking-tight">
           Edit Profile
         </h2>
-        
+
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label className="block mb-1 font-medium text-blue-700">Nama</label>
-            <input
-              name="name"
-              type="text"
-              className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              value={form.name}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium text-blue-700">Email</label>
-            <input
-              name="email"
-              type="email"
-              className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              value={form.email}
-              onChange={handleChange}
-            />
-          </div>
-          <div>
-            <label className="block mb-1 font-medium text-blue-700">Username</label>
-            <input
-              name="username"
-              type="text"
-              className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-              value={form.username}
-              onChange={handleChange}
-            />
-          </div>
+          {["name", "email", "username"].map((field) => (
+            <div key={field}>
+              <label className="block mb-1 font-medium text-blue-700 capitalize">
+                {field}
+              </label>
+              <input
+                name={field}
+                type={field === "email" ? "email" : "text"}
+                className="w-full border border-blue-200 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                value={form[field]}
+                onChange={handleChange}
+              />
+            </div>
+          ))}
+
+          {/* Password */}
           <div>
             <label className="block mb-1 font-medium text-blue-700">Password</label>
             <div className="relative">
@@ -93,6 +81,8 @@ export default function EditProfile() {
               </button>
             </div>
           </div>
+
+          {/* Konfirmasi Password */}
           <div>
             <label className="block mb-1 font-medium text-blue-700">Konfirmasi Password</label>
             <div className="relative">
