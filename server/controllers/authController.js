@@ -1,8 +1,8 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const pool = require('../config/database');
+// server/controllers/authController.js
 
-// REGISTER USER
+const jwt = require('jsonwebtoken');
+const userService = require('../services/userService'); // Impor userService
+
 exports.register = async (req, res, next) => {
   try {
     const { name, email, username, password } = req.body;
@@ -11,62 +11,60 @@ exports.register = async (req, res, next) => {
     if (!name || !email || !username || !password) {
       return res.status(400).json({ message: 'Semua field wajib diisi.' });
     }
-
-    // Validasi email format
     const emailRegex = /\S+@\S+\.\S+/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: 'Format email tidak valid.' });
     }
-
-    // Validasi password minimal 6 karakter
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password minimal 6 karakter.' });
     }
 
-    // Cek apakah email atau username sudah ada
-    const [exists] = await pool.query(
-      'SELECT id FROM users WHERE email = ? OR username = ?',
-      [email, username]
-    );
-    if (exists.length > 0) {
+    // Cek apakah email atau username sudah ada melalui userService
+    const existingUser = await userService.findUserByIdentity(username);
+    if (!existingUser) {
+      const existingUserByEmail = await userService.findUserByIdentity(email);
+      if (existingUserByEmail) {
+        return res.status(409).json({ message: 'Email/username sudah terpakai.' });
+      }
+    } else {
       return res.status(409).json({ message: 'Email/username sudah terpakai.' });
     }
 
-    // Hash password
-    const hash = await bcrypt.hash(password, 10);
-    await pool.query(
-      'INSERT INTO users (name, email, username, password) VALUES (?, ?, ?, ?)',
-      [name, email, username, hash]
-    );
-    res.status(201).json({ message: 'Register berhasil!' });
+    // Buat pengguna baru melalui userService (hashing sudah di service)
+    const newUser = await userService.createUser({ name, email, username, password });
+
+    // Jangan kirim password hashed kembali ke klien
+    const { password: _, ...userWithoutPassword } = newUser;
+
+    res.status(201).json({ message: 'Register berhasil!', user: userWithoutPassword });
   } catch (err) {
+    if (err.message === 'Email atau username sudah terdaftar.') {
+      return res.status(409).json({ message: err.message });
+    }
     next(err);
   }
 };
 
-// LOGIN USER (bisa username/email/identity)
+// LOGIN USER
 exports.login = async (req, res, next) => {
   try {
     const { username, email, identity, password } = req.body;
     const loginIdentity = identity || username || email;
 
-    // Pastikan username/email dan password diisi
     if (!loginIdentity || !password) {
       return res.status(400).json({ message: "Username/email dan password wajib diisi." });
     }
 
-    // Cek apakah username atau email terdaftar
-    const [users] = await pool.query(
-      'SELECT * FROM users WHERE email=? OR username=?',
-      [loginIdentity, loginIdentity]
-    );
-    if (users.length === 0) {
+    // Dapatkan user dari service
+    const user = await userService.findUserByIdentity(loginIdentity);
+
+    if (!user) {
       return res.status(401).json({ message: 'User tidak ditemukan.' });
     }
 
-    const user = users[0];
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
+    // Validasi password melalui service
+    const isPasswordValid = await userService.validatePassword(password, user.password);
+    if (!isPasswordValid) {
       return res.status(401).json({ message: 'Password salah.' });
     }
 
@@ -77,14 +75,12 @@ exports.login = async (req, res, next) => {
       { expiresIn: '7d' }
     );
 
+    // Kirim respons dengan token dan informasi user (tanpa password)
+    const { password: _, ...userWithoutPassword } = user;
+
     res.json({
       token,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        username: user.username,
-      },
+      user: userWithoutPassword,
     });
   } catch (err) {
     next(err);
